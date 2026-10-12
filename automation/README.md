@@ -15,7 +15,7 @@ cd automation
 # 1) 装依赖（只需一次）
 pip install -r requirements.txt
 
-# 2) 跑全部用例 —— 期望 89 passed（约 16 秒）
+# 2) 跑全部用例 —— 期望 89 passed（本机十几秒）
 pytest -v
 
 # 常用变体
