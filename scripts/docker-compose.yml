@@ -1,0 +1,26 @@
+# Redmine + MySQL 一键部署配置
+services:
+  db:
+    image: mysql:8.0                 # 数据库容器，用 MySQL 8
+    environment:
+      MYSQL_ROOT_PASSWORD: root123     # 数据库 root 密码（本地测试用，随意）
+      MYSQL_DATABASE: redmine          # 自动创建一个叫 redmine 的库
+      MYSQL_USER: redmine              # 创建一个应用专用账号
+      MYSQL_PASSWORD: redmine123       # 应用账号密码
+    volumes:
+      - ./mysql-data:/var/lib/mysql    # 数据存到本地目录，容器删了数据还在
+    restart: unless-stopped
+
+  redmine:
+    image: redmine:6                   # Redmine 官方镜像（版本 6）
+    ports:
+      - "3000:3000"                    # 把容器的 3000 端口映射到本机 3000
+    environment:
+      REDMINE_DB_MYSQL: db             # 数据库地址指向 db 容器
+      REDMINE_DB_DATABASE: redmine
+      REDMINE_DB_USERNAME: redmine
+      REDMINE_DB_PASSWORD: redmine123
+      REDMINE_SECRET_KEY_BASE: change_me_to_random_string
+    depends_on:
+      - db
+    restart: unless-stopped

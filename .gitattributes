@@ -1,0 +1,8 @@
+# 默认按文本处理，仓库内存 LF，检出时按平台转换
+* text=auto
+
+# 脚本换行符
+*.sh  text eol=lf
+*.rb  text eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf

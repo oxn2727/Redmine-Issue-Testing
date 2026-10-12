@@ -1,0 +1,478 @@
+{
+  "info": {
+    "name": "Redmine 冒烟（7 条）",
+    "description": "对应《3.1.冒烟用例.md》第二节的接口冒烟 7 条。\n【用法】\n1. 先导入 Redmine_Smoke.postman_environment.json，右上角环境下拉选 Redmine_Smoke；\n2. 再导入本集合；\n3. 按 01 → 02 → 03 → 04 → 05 → 06 → 07 的顺序点 Send（02 建的单号会自动存进 smoke_id，03/04/05 直接引用）。\n【前提】管理 → 设置 → API → 勾选「启用 REST Web Service」。",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "SM-API-01 认证 —— Key 有效、REST API 已开",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"状态码 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"login = admin\", function () { pm.expect(pm.response.json().user.login).to.eql(\"admin\"); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Redmine-API-Key",
+            "value": "{{admin_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/users/current.json",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "users",
+            "current.json"
+          ]
+        },
+        "description": "证明 Key 有效、REST API 已启用。期望 200，user.login = admin。"
+      }
+    },
+    {
+      "name": "SM-API-02 创建 Issue —— 写通道通",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"状态码 201\", function () { pm.response.to.have.status(201); });",
+              "pm.test(\"返回了 issue.id\", function () { pm.expect(pm.response.json().issue.id).to.be.a(\"number\"); });",
+              "if (!pm.environment.name) {",
+              "  console.error(\"⚠️ 右上角没有选中环境：smoke_id 没有被保存，SM-API-03 会 404。请选 Redmine_Smoke 后重跑本请求。\");",
+              "} else {",
+              "  pm.environment.set(\"smoke_id\", pm.response.json().issue.id);",
+              "  console.log(\"smoke_id =\", pm.environment.get(\"smoke_id\"));",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-Redmine-API-Key",
+            "value": "{{admin_key}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"issue\": {\n    \"project_id\": 1,\n    \"subject\": \"smoke-api\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/issues.json",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "issues.json"
+          ]
+        },
+        "description": "证明写通道通。期望 201，并把返回的 issue.id 自动写入环境变量 smoke_id。"
+      }
+    },
+    {
+      "name": "SM-API-03 查询详情 —— 读通道通",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var id = pm.environment.get(\"smoke_id\");",
+              "if (!id) {",
+              "  throw new Error(\"smoke_id 是空的 → 这条请求必然 404。请先跑 SM-API-02，并确认右上角已选中 Redmine_Smoke 环境。\");",
+              "}",
+              "console.log(\"使用的 smoke_id =\", id);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"状态码 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"subject = smoke-api\", function () { pm.expect(pm.response.json().issue.subject).to.eql(\"smoke-api\"); });",
+              "pm.test(\"status.name = New\", function () { pm.expect(pm.response.json().issue.status.name).to.eql(\"New\"); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Redmine-API-Key",
+            "value": "{{admin_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/issues/{{smoke_id}}.json",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "issues",
+            "{{smoke_id}}.json"
+          ]
+        },
+        "description": "证明读通道通。期望 200，subject = smoke-api，status.name = New。"
+      }
+    },
+    {
+      "name": "SM-API-04 更新 Issue —— 改通道通（204）",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var id = pm.environment.get(\"smoke_id\");",
+              "if (!id) {",
+              "  throw new Error(\"smoke_id 是空的 → 这条请求必然 404。请先跑 SM-API-02，并确认右上角已选中 Redmine_Smoke 环境。\");",
+              "}",
+              "console.log(\"使用的 smoke_id =\", id);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"状态码 204（不是 200）\", function () { pm.response.to.have.status(204); });",
+              "pm.test(\"响应体为空\", function () { pm.expect(pm.response.text()).to.be.empty; });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "X-Redmine-API-Key",
+            "value": "{{admin_key}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"issue\": {\n    \"subject\": \"smoke-api-upd\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/issues/{{smoke_id}}.json",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "issues",
+            "{{smoke_id}}.json"
+          ]
+        },
+        "description": "证明改通道通。返回 204 且无响应体 —— 这不是失败。是否真的改了，靠下一条回读。"
+      }
+    },
+    {
+      "name": "SM-API-04B 回读 —— 确认真的改了",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var id = pm.environment.get(\"smoke_id\");",
+              "if (!id) {",
+              "  throw new Error(\"smoke_id 是空的 → 这条请求必然 404。请先跑 SM-API-02，并确认右上角已选中 Redmine_Smoke 环境。\");",
+              "}",
+              "console.log(\"使用的 smoke_id =\", id);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"状态码 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"subject 已变成 smoke-api-upd\", function () { pm.expect(pm.response.json().issue.subject).to.eql(\"smoke-api-upd\"); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Redmine-API-Key",
+            "value": "{{admin_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/issues/{{smoke_id}}.json",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "issues",
+            "{{smoke_id}}.json"
+          ]
+        },
+        "description": "204 不代表改成功（无权限、非法状态转移也返回 204），必须回读。"
+      }
+    },
+    {
+      "name": "SM-API-05 删除 Issue —— 删通道通（204）",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var id = pm.environment.get(\"smoke_id\");",
+              "if (!id) {",
+              "  throw new Error(\"smoke_id 是空的 → 这条请求必然 404。请先跑 SM-API-02，并确认右上角已选中 Redmine_Smoke 环境。\");",
+              "}",
+              "console.log(\"使用的 smoke_id =\", id);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"状态码 204\", function () { pm.response.to.have.status(204); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "X-Redmine-API-Key",
+            "value": "{{admin_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/issues/{{smoke_id}}.json",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "issues",
+            "{{smoke_id}}.json"
+          ]
+        },
+        "description": "证明删通道通。期望 204；是否真删了靠下一条回读。"
+      }
+    },
+    {
+      "name": "SM-API-05B 回读 —— 确认真的删了（404）",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var id = pm.environment.get(\"smoke_id\");",
+              "if (!id) {",
+              "  throw new Error(\"smoke_id 是空的 → 这条请求必然 404。请先跑 SM-API-02，并确认右上角已选中 Redmine_Smoke 环境。\");",
+              "}",
+              "console.log(\"使用的 smoke_id =\", id);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"状态码 404\", function () { pm.response.to.have.status(404); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Redmine-API-Key",
+            "value": "{{admin_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/issues/{{smoke_id}}.json",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "issues",
+            "{{smoke_id}}.json"
+          ]
+        },
+        "description": "删除后回读应为 404，证明不是「假装删了」。"
+      }
+    },
+    {
+      "name": "SM-API-06 列表与分页 —— 列表通",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"状态码 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"issues 是数组且条数 <= 5\", function () {",
+              "  var j = pm.response.json();",
+              "  pm.expect(j.issues).to.be.an(\"array\");",
+              "  pm.expect(j.issues.length).to.be.at.most(5);",
+              "});",
+              "pm.test(\"含分页元信息\", function () {",
+              "  var j = pm.response.json();",
+              "  pm.expect(j).to.have.property(\"total_count\");",
+              "  pm.expect(j).to.have.property(\"limit\");",
+              "  pm.expect(j).to.have.property(\"offset\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Redmine-API-Key",
+            "value": "{{admin_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/issues.json?limit=5",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "issues.json"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "5"
+            }
+          ]
+        },
+        "description": "证明列表/分页通。期望 200，issues 为数组且条数 ≤ 5。"
+      }
+    },
+    {
+      "name": "SM-API-07 权限校验 —— 低权限打 /users.json（403）",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"状态码 403\", function () { pm.response.to.have.status(403); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Redmine-API-Key",
+            "value": "{{reporter_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/users.json",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "users.json"
+          ]
+        },
+        "description": "界面上普通用户看不到「管理」菜单，接口不藏。期望 403。必做对照见下一条。"
+      }
+    },
+    {
+      "name": "SM-API-07B 对照 —— admin 打同一接口（200）",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"状态码 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"返回 users 数组\", function () { pm.expect(pm.response.json().users).to.be.an(\"array\"); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Redmine-API-Key",
+            "value": "{{admin_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/users.json",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "users.json"
+          ]
+        },
+        "description": "只测 403 分不清「权限拦住了」还是「接口坏了」，必须同时有一个 200 的对照。"
+      }
+    }
+  ]
+}

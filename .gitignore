@@ -1,0 +1,27 @@
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# ---------- 测试产物 ----------
+report.html
+automation/report.html
+
+# ---------- 环境运行时数据（体积大，不入库）----------
+mysql-data/
+*.sql
+*.sql.gz
+
+# ---------- 编辑器 / 系统 ----------
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ---------- 本地私密配置（config.py 支持环境变量覆盖）----------
+.env
+.env.local
+*.local.py
