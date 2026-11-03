@@ -60,6 +60,10 @@ Redmine-Issue-Testing/
 │   ├── config.py · api_client.py · conftest.py
 │   └── test_auth.py · test_issue_*.py · test_scenario.py · test_security.py
 ├── postman/                                 Postman 集合 + 环境（冒烟 7 条，导入即用）
+├── log-analysis/                            【日志分析：读 Redmine 自己的日志出缺陷单】
+│   ├── README.md                                架构 / 各函数作用 / 6 条规则 / 局限
+│   ├── collect.py · parse_rails.py · detect.py · report.py · analyze.py
+│   └── sample/redmine.log                       真实容器日志 500 行（24 请求 / 2 条异常栈）
 ├── defects/缺陷记录.md                        缺陷提报规范 + 台账（当前为空）
 └── scripts/                                 环境复现脚本（docker-compose / seed / 账号 / Key）
 ```
@@ -100,6 +104,17 @@ pytest -v              # 期望：89 passed
 
 Postman 里 `Import` 导入 `postman/` 下两个文件 → 右上角选 `Redmine_Smoke` 环境 → 按 `SM-API-01 → 07` 顺序 Send。
 7 条覆盖认证 / 创建 / 查询 / 更新 / 删除 / 列表 / 权限，每条自带断言。
+
+### 5. （可选）分析日志
+
+```bash
+cd log-analysis
+python analyze.py sample/redmine.log                    # 内置真实样本
+python analyze.py --docker <容器名> --since 30m          # 直接读容器（官方镜像不写日志文件）
+```
+
+产出 `reports/bug-NN-*.md`（每条问题一张缺陷单）+ `reports/summary.md`（汇总 5 表）。
+零第三方依赖，只用标准库。详见 `log-analysis/README.md`。
 
 ---
 
@@ -143,6 +158,7 @@ Postman 里 `Import` 导入 `postman/` 下两个文件 → 右上角选 `Redmine
 | 执行结果与实测数据 | `docs/2.6-测试报告.md` |
 | 环境怎么复现 | `docs/2.2-环境搭建指南.md` + `scripts/` |
 | 自动化怎么跑 | `automation/README.md`、`automation/4.2-接口测试执行步骤.md` |
+| 日志分析怎么跑 | `log-analysis/README.md` |
 
 ---
 

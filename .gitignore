@@ -25,3 +25,6 @@ Thumbs.db
 .env
 .env.local
 *.local.py
+
+# ---------- 日志分析产物 ----------
+log-analysis/reports/

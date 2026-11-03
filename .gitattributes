@@ -1,8 +1,2 @@
-# 默认按文本处理，仓库内存 LF，检出时按平台转换
-* text=auto
-
-# 脚本换行符
-*.sh  text eol=lf
-*.rb  text eol=lf
-*.cmd text eol=crlf
-*.bat text eol=crlf
+# 日志样本保持原样，不做行尾转换（否则 CRLF 会让文件看起来整份被改）
+*.log -text
